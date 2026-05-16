@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Swim Malta Today</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0077b6" />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="app-icon">🌊</div>
+      <div>
+        <h1>Swim Malta Today</h1>
+        <p>Find the best beaches to swim in Malta today.</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="best-beaches">
+      <h2>Best Beaches</h2>
+
+      <div id="best-side-banner">
+        Calculating best swimming side...
+      </div>
+
+      <div id="day-selector">
+        <button class="day-button active" data-day="0">Today</button>
+        <button class="day-button" data-day="1">Tomorrow</button>
+        <button class="day-button" data-day="2">Day After</button>
+      </div>
+
+      <button id="location-button">📍 Find best beach near me</button>
+
+      <div id="filters">
+        <button class="filter-button active" data-filter="all">All</button>
+        <button class="filter-button" data-filter="Sandy">Sandy</button>
+        <button class="filter-button" data-filter="Rocky">Rocky</button>
+        <button class="filter-button" data-filter="North">North</button>
+        <button class="filter-button" data-filter="South">South</button>
+        <button class="filter-button" data-filter="East">East</button>
+        <button class="filter-button" data-filter="West">West</button>
+        <button class="filter-button" data-filter="jellyfish-safe">Low Jellyfish Risk</button>
+      </div>
+
+      <div id="beach-list">Loading beach data...</div>
+    </section>
+
+    <section id="map"></section>
+  </main>
+
+  <footer>
+    Weather and marine data by Open-Meteo. Map by OpenStreetMap.
+  </footer>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
