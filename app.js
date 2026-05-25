@@ -1,8 +1,23 @@
+const firebaseConfig = {
+  apiKey: "AIzaSyBmlSyovip8LHGYKEK5HlTqLbo8ShE1Gk8",
+  authDomain: "swim-malta-today.firebaseapp.com",
+  projectId: "swim-malta-today",
+  storageBucket: "swim-malta-today.firebasestorage.app",
+  messagingSenderId: "281555853040",
+  appId: "1:281555853040:web:556923cdddecd4d7ceec35",
+  measurementId: "G-XWX75BBN6V"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 let selectedDay = 0;
 let activeFilters = ["all"];
 let mapMarkers = [];
 let userMarker = null;
 let latestResults = [];
+let jellyfishReports = [];
+let selectedReportType = "";
 
 const beaches = [
   { name: "Għadira Bay", side: "North", area: "Mellieħa", type: "Sandy", lat: 35.9706, lng: 14.3578, exposedTo: ["NE", "E"] },
@@ -42,10 +57,7 @@ function setStatus(message) {
 }
 
 function getForecastHourIndex(day) {
-  if (day === 0) {
-    return new Date().getHours();
-  }
-
+  if (day === 0) return new Date().getHours();
   return day * 24 + 12;
 }
 
@@ -69,6 +81,25 @@ async function fetchJson(url) {
   }
 
   return response.json();
+}
+
+async function loadJellyfishReports() {
+  try {
+    const snapshot = await db
+      .collection("jellyfishReports")
+      .orderBy("timestamp", "desc")
+      .limit(200)
+      .get();
+
+    jellyfishReports = [];
+
+    snapshot.forEach(doc => {
+      jellyfishReports.push(doc.data());
+    });
+  } catch (error) {
+    console.error("Could not load jellyfish reports:", error);
+    jellyfishReports = [];
+  }
 }
 
 async function getWeatherForBeach(beach) {
@@ -96,9 +127,44 @@ async function getWeatherForBeach(beach) {
 }
 
 function calculateJellyfishRisk(windCompass, beach) {
+  const recentReports = jellyfishReports.filter(report => {
+    const sameBeach = report.beach === beach.name;
+    const recent = Date.now() - report.timestamp < 24 * 60 * 60 * 1000;
+    return sameBeach && recent;
+  });
+
+  const manyReports = recentReports.filter(report => report.report === "Many Jellyfish");
+  const someReports = recentReports.filter(report => report.report === "Some Jellyfish");
+  const clearReports = recentReports.filter(report => report.report === "No Jellyfish");
+
+  if (manyReports.length > 0) {
+    return {
+      level: "High",
+      className: "jellyfish-high",
+      text: "Community reported many"
+    };
+  }
+
+  if (someReports.length > 0) {
+    return {
+      level: "Medium",
+      className: "jellyfish-medium",
+      text: "Community reported some"
+    };
+  }
+
+  if (clearReports.length > 0) {
+    return {
+      level: "Low",
+      className: "jellyfish-low",
+      text: "Community reported clear"
+    };
+  }
+
   if (beach.exposedTo.includes(windCompass)) {
     return {
       level: "High",
+      className: "jellyfish-high",
       text: "Higher risk due to wind"
     };
   }
@@ -122,12 +188,14 @@ function calculateJellyfishRisk(windCompass, beach) {
   if (hasNearbyExposure) {
     return {
       level: "Medium",
+      className: "jellyfish-medium",
       text: "Possible risk"
     };
   }
 
   return {
     level: "Low",
+    className: "jellyfish-low",
     text: "Lower risk"
   };
 }
@@ -162,7 +230,10 @@ function scoreBeach(beach, weather) {
   }
 
   if (jellyfishRisk.level === "High") {
-    score -= 15;
+    score -= 25;
+    reasons.push("jellyfish risk");
+  } else if (jellyfishRisk.level === "Medium") {
+    score -= 10;
     reasons.push("possible jellyfish risk");
   }
 
@@ -192,6 +263,8 @@ function scoreBeach(beach, weather) {
 async function loadBeachConditions() {
   setStatus("Loading live beach conditions...");
   document.getElementById("beach-list").innerHTML = "";
+
+  await loadJellyfishReports();
 
   const promises = beaches.map(async beach => {
     try {
@@ -272,9 +345,32 @@ function filterResults(results) {
 
   return results.filter(result => {
     return activeFilters.every(filter => {
+      if (filter === "jellyfish-low") {
+        return result.rating.jellyfishRisk.level === "Low";
+      }
+
+      if (filter === "best") {
+        return result.rating.status === "Best";
+      }
+
+      if (filter === "good") {
+        return result.rating.status === "Good";
+      }
+
       return result.beach.type === filter || result.beach.side === filter;
     });
   });
+}
+
+function updateFilterSummary() {
+  const summary = document.getElementById("active-filter-summary");
+
+  if (activeFilters.includes("all")) {
+    summary.textContent = "Showing all beaches.";
+    return;
+  }
+
+  summary.textContent = `Showing beaches matching: ${activeFilters.join(" + ")}`;
 }
 
 function clearMapMarkers() {
@@ -285,26 +381,22 @@ function clearMapMarkers() {
   mapMarkers = [];
 }
 
-function getWindArrow(weather) {
-  let windClass = "best";
+function getWindStrengthClass(windSpeed) {
+  if (windSpeed > 20) return "strong";
+  if (windSpeed > 10) return "moderate";
+  return "light";
+}
 
-  if (weather.windSpeed > 20) {
-    windClass = "avoid";
-  } else if (weather.windSpeed > 10) {
-    windClass = "good";
-  }
+function getWindArrow(weather) {
+  const strengthClass = getWindStrengthClass(weather.windSpeed);
 
   return `
-    <div class="wind-arrow ${windClass}" style="transform: rotate(${weather.windDirectionDegrees}deg);">
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <path
-          d="M32 4 L54 60 L32 48 L10 60 Z"
-          fill="currentColor"
-          stroke="white"
-          stroke-width="3"
-          stroke-linejoin="round"
-        ></path>
-      </svg>
+    <div 
+      class="wind-arrow-icon ${strengthClass}" 
+      style="transform: rotate(${weather.windDirectionDegrees}deg);"
+      title="Wind direction"
+    >
+      ↑
     </div>
   `;
 }
@@ -315,6 +407,7 @@ function renderResults() {
 
   beachList.innerHTML = "";
   clearMapMarkers();
+  updateFilterSummary();
 
   if (!filteredResults.length) {
     beachList.innerHTML = `<p>No beaches match these filters.</p>`;
@@ -338,7 +431,7 @@ function renderResults() {
       <p>🌬 Wind: ${rating.windCompass}, ${Math.round(weather.windSpeed)} km/h</p>
       <p>🌊 Waves: ${weather.waveHeight.toFixed(1)}m</p>
       <p>🌧 Rain chance: ${Math.round(weather.rainChance)}%</p>
-      <p>🪼 Jellyfish: ${rating.jellyfishRisk.text}</p>
+      <p>🪼 Jellyfish: <span class="${rating.jellyfishRisk.className}">${rating.jellyfishRisk.text}</span></p>
       <p>⭐ Score: ${rating.score}/100</p>
       <p><strong>Why:</strong> ${reasonText}</p>
     `;
@@ -352,8 +445,8 @@ function renderResults() {
     const markerIcon = L.divIcon({
       className: "wind-marker",
       html: getWindArrow(weather),
-      iconSize: [40, 40],
-      iconAnchor: [20, 20]
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
     });
 
     const marker = L.marker([beach.lat, beach.lng], {
@@ -401,29 +494,31 @@ function setupFilterButtons() {
         });
 
         button.classList.add("active");
-      } else {
-        const allButton = document.querySelector('[data-filter="all"]');
+        renderResults();
+        return;
+      }
 
-        activeFilters = activeFilters.filter(item => item !== "all");
+      const allButton = document.querySelector('[data-filter="all"]');
+
+      activeFilters = activeFilters.filter(item => item !== "all");
+
+      if (allButton) {
+        allButton.classList.remove("active");
+      }
+
+      if (activeFilters.includes(filter)) {
+        activeFilters = activeFilters.filter(item => item !== filter);
+        button.classList.remove("active");
+      } else {
+        activeFilters.push(filter);
+        button.classList.add("active");
+      }
+
+      if (!activeFilters.length) {
+        activeFilters = ["all"];
 
         if (allButton) {
-          allButton.classList.remove("active");
-        }
-
-        if (activeFilters.includes(filter)) {
-          activeFilters = activeFilters.filter(item => item !== filter);
-          button.classList.remove("active");
-        } else {
-          activeFilters.push(filter);
-          button.classList.add("active");
-        }
-
-        if (!activeFilters.length) {
-          activeFilters = ["all"];
-
-          if (allButton) {
-            allButton.classList.add("active");
-          }
+          allButton.classList.add("active");
         }
       }
 
@@ -478,10 +573,93 @@ function setupUserLocation() {
   });
 }
 
+function populateBeachDropdown() {
+  const select = document.getElementById("report-beach");
+
+  select.innerHTML = "";
+
+  beaches.forEach(beach => {
+    const option = document.createElement("option");
+    option.value = beach.name;
+    option.textContent = beach.name;
+    select.appendChild(option);
+  });
+}
+
+function setupReportPanel() {
+  const reportButton = document.getElementById("report-button");
+  const panel = document.getElementById("jellyfish-panel");
+  const closeButton = document.getElementById("close-report");
+  const submitButton = document.getElementById("submit-report");
+
+  reportButton.addEventListener("click", () => {
+    panel.classList.remove("hidden");
+  });
+
+  closeButton.addEventListener("click", () => {
+    panel.classList.add("hidden");
+  });
+
+  document.querySelectorAll(".report-choice").forEach(choice => {
+    choice.addEventListener("click", () => {
+      selectedReportType = choice.dataset.report;
+
+      document.querySelectorAll(".report-choice").forEach(button => {
+        button.classList.remove("selected");
+      });
+
+      choice.classList.add("selected");
+    });
+  });
+
+  submitButton.addEventListener("click", async () => {
+    const beach = document.getElementById("report-beach").value;
+    const comment = document.getElementById("report-comment").value.trim();
+
+    if (!selectedReportType) {
+      alert("Please select what you saw.");
+      return;
+    }
+
+    submitButton.textContent = "Submitting...";
+    submitButton.disabled = true;
+
+    try {
+      await db.collection("jellyfishReports").add({
+        beach,
+        report: selectedReportType,
+        comment,
+        timestamp: Date.now()
+      });
+
+      alert("Thank you. Your jellyfish report was submitted.");
+
+      selectedReportType = "";
+      document.getElementById("report-comment").value = "";
+
+      document.querySelectorAll(".report-choice").forEach(button => {
+        button.classList.remove("selected");
+      });
+
+      panel.classList.add("hidden");
+
+      await loadBeachConditions();
+    } catch (error) {
+      console.error("Could not submit report:", error);
+      alert("Could not submit report. Please try again.");
+    }
+
+    submitButton.textContent = "Submit Report";
+    submitButton.disabled = false;
+  });
+}
+
 function startApp() {
+  populateBeachDropdown();
   setupDayButtons();
   setupFilterButtons();
   setupUserLocation();
+  setupReportPanel();
   loadBeachConditions();
 }
 

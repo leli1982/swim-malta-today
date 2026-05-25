@@ -1,4 +1,4 @@
-const CACHE_NAME = "swim-malta-v1";
+const CACHE_NAME = "swim-malta-v2";
 
 const urlsToCache = [
   "/",
