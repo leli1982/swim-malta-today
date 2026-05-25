@@ -1,12 +1,275 @@
-.wind-arrow svg {
-  width: 38px;
-  height: 38px;
-  display: block;
-  filter: drop-shadow(0 3px 3px rgba(0,0,0,0.35));
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f2f8fb;
+  color: #102a43;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 420px;
+  max-width: 100%;
+  background: #ffffff;
+  padding: 18px;
+  overflow-y: auto;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.08);
+  z-index: 2;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.logo-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #e8f5ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.app-header p {
+  margin: 4px 0 0;
+  color: #627d98;
+  font-size: 14px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: #e8f5ff;
+  padding: 5px;
+  border-radius: 14px;
+  gap: 5px;
+}
+
+.day-button,
+.filter-button,
+.primary-button {
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.day-button {
+  padding: 10px;
+  border-radius: 10px;
+  background: transparent;
+  color: #0b63ce;
+  font-weight: 700;
+}
+
+.day-button.active {
+  background: #0b63ce;
+  color: white;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-button {
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: #edf2f7;
+  color: #243b53;
 }
 
 .filter-button.active {
   background: #0b63ce;
   color: white;
-  box-shadow: 0 6px 14px rgba(11,99,206,0.28);
+  box-shadow: 0 6px 14px rgba(11, 99, 206, 0.28);
+}
+
+.primary-button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  background: #0077b6;
+  color: white;
+  font-weight: 700;
+}
+
+.best-side-card {
+  padding: 14px;
+  border-radius: 16px;
+  background: #e8f5ff;
+  line-height: 1.4;
+}
+
+.status-message {
+  color: #627d98;
+  font-size: 14px;
+}
+
+.beach-card {
+  padding: 14px;
+  margin-bottom: 12px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #e6edf3;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+}
+
+.beach-card h3 {
+  margin: 0 0 8px;
+}
+
+.beach-card p {
+  margin: 6px 0;
+  font-size: 14px;
+}
+
+.best-card {
+  border-left: 6px solid #16a34a;
+}
+
+.good-card {
+  border-left: 6px solid #f59e0b;
+}
+
+.avoid-card {
+  border-left: 6px solid #dc2626;
+}
+
+.badge {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.best {
+  background: #16a34a;
+}
+
+.good {
+  background: #f59e0b;
+}
+
+.avoid {
+  background: #dc2626;
+}
+
+.map-area {
+  flex: 1;
+  position: relative;
+}
+
+#map {
+  width: 100%;
+  height: 100vh;
+}
+
+.wind-marker {
+  background: transparent;
+  border: none;
+}
+
+.wind-arrow {
+  width: 40px;
+  height: 40px;
+  color: #16a34a;
+}
+
+.wind-arrow.good {
+  color: #f59e0b;
+}
+
+.wind-arrow.avoid {
+  color: #dc2626;
+}
+
+.wind-arrow svg {
+  width: 38px;
+  height: 38px;
+  display: block;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35));
+}
+
+.user-marker {
+  font-size: 28px;
+}
+
+.wind-legend {
+  position: absolute;
+  right: 14px;
+  bottom: 20px;
+  background: white;
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  font-size: 13px;
+  z-index: 500;
+}
+
+.wind-legend p {
+  margin: 6px 0;
+}
+
+.legend-arrow {
+  font-weight: bold;
+}
+
+.legend-arrow.green {
+  color: #16a34a;
+}
+
+.legend-arrow.orange {
+  color: #f59e0b;
+}
+
+.legend-arrow.red {
+  color: #dc2626;
+}
+
+@media (max-width: 850px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-height: 55vh;
+  }
+
+  #map {
+    height: 45vh;
+  }
+
+  .wind-legend {
+    right: 10px;
+    bottom: 10px;
+  }
 }

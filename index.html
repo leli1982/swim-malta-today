@@ -6,12 +6,10 @@
 
   <title>Swim Malta Today</title>
 
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0b63ce" />
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <div class="app-shell">
     <aside class="sidebar">
@@ -19,89 +17,55 @@
         <div class="logo-circle">🌊</div>
         <div>
           <h1>Swim Malta Today</h1>
-          <p>Find the best beaches to swim</p>
+          <p>Find the best beaches to swim in Malta</p>
         </div>
       </header>
 
       <section class="panel">
-        <div id="day-selector" class="segmented">
+        <div class="segmented">
           <button class="day-button active" data-day="0">Today</button>
           <button class="day-button" data-day="1">Tomorrow</button>
           <button class="day-button" data-day="2">Day After</button>
         </div>
 
-        <div id="filters" class="filters">
+        <div class="filters">
           <button class="filter-button active" data-filter="all">All</button>
           <button class="filter-button" data-filter="Sandy">Sandy</button>
           <button class="filter-button" data-filter="Rocky">Rocky</button>
+          <button class="filter-button" data-filter="Artificial">Artificial</button>
           <button class="filter-button" data-filter="North">North</button>
           <button class="filter-button" data-filter="South">South</button>
           <button class="filter-button" data-filter="East">East</button>
           <button class="filter-button" data-filter="West">West</button>
-          <button class="filter-button" data-filter="jellyfish-safe">Low Jellyfish</button>
         </div>
 
         <button id="location-button" class="primary-button">📍 Near me</button>
 
         <div id="best-side-banner" class="best-side-card">
-          Calculating best swimming side...
+          Loading best swimming side...
         </div>
 
-        <div id="beach-list">Loading beach data...</div>
+        <div id="status-message" class="status-message">
+          Loading beach conditions...
+        </div>
+
+        <div id="beach-list"></div>
       </section>
     </aside>
 
     <main class="map-area">
       <div id="map"></div>
 
-      <button id="report-button" class="floating-report-button">
-        🪼 Report Jellyfish
-      </button>
-
-      <div id="jellyfish-panel" class="report-panel hidden">
-        <button id="close-report" class="close-button">×</button>
-        <h2>Report Jellyfish</h2>
-
-        <label>Beach</label>
-        <select id="report-beach"></select>
-
-        <label>What did you see?</label>
-
-        <button class="report-choice high" data-report="Many Jellyfish">
-          🪼 Many Jellyfish
-          <span>Lots seen in the water</span>
-        </button>
-
-        <button class="report-choice medium" data-report="Some Jellyfish">
-          🪼 Some Jellyfish
-          <span>A few seen</span>
-        </button>
-
-        <button class="report-choice low" data-report="No Jellyfish">
-          ✅ No Jellyfish
-          <span>Water is clear</span>
-        </button>
-
-        <label>Comment optional</label>
-        <input id="report-comment" placeholder="e.g. Near the rocks..." />
-
-        <button id="submit-report" class="submit-button">Submit Report</button>
-      </div>
-
       <div class="wind-legend">
         <strong>Wind strength</strong>
-        <p><span class="legend-arrow green">➜</span> 0–10 km/h</p>
-        <p><span class="legend-arrow orange">➜</span> 10–20 km/h</p>
-        <p><span class="legend-arrow red">➜</span> 20+ km/h</p>
+        <p><span class="legend-arrow green">➜</span> Light</p>
+        <p><span class="legend-arrow orange">➜</span> Moderate</p>
+        <p><span class="legend-arrow red">➜</span> Strong</p>
       </div>
     </main>
   </div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-<script src="app.js"></script>
-
-
+  <script src="app.js"></script>
 </body>
 </html>

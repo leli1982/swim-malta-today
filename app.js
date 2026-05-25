@@ -1,23 +1,8 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyBmlSyovip8LHGYKEK5HlTqLbo8ShE1Gk8",
-  authDomain: "swim-malta-today.firebaseapp.com",
-  projectId: "swim-malta-today",
-  storageBucket: "swim-malta-today.firebasestorage.app",
-  messagingSenderId: "281555853040",
-  appId: "1:281555853040:web:556923cdddecd4d7ceec35",
-  measurementId: "G-XWX75BBN6V"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
 let selectedDay = 0;
 let activeFilters = ["all"];
 let mapMarkers = [];
 let userMarker = null;
 let latestResults = [];
-let selectedReportType = "";
-let jellyfishReports = [];
 
 const beaches = [
   { name: "Għadira Bay", side: "North", area: "Mellieħa", type: "Sandy", lat: 35.9706, lng: 14.3578, exposedTo: ["NE", "E"] },
@@ -41,7 +26,9 @@ const beaches = [
   { name: "Blue Lagoon", side: "North", area: "Comino", type: "Rocky", lat: 36.0146, lng: 14.3317, exposedTo: ["N", "NE"] }
 ];
 
-const map = L.map("map", { zoomControl: false }).setView([35.9375, 14.3754], 11);
+const map = L.map("map", {
+  zoomControl: false
+}).setView([35.9375, 14.3754], 11);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 18,
@@ -50,22 +37,15 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 L.control.zoom({ position: "bottomright" }).addTo(map);
 
-function populateBeachDropdown() {
-  const select = document.getElementById("report-beach");
-  if (!select) return;
-
-  select.innerHTML = "";
-
-  beaches.forEach(beach => {
-    const option = document.createElement("option");
-    option.value = beach.name;
-    option.innerText = beach.name;
-    select.appendChild(option);
-  });
+function setStatus(message) {
+  document.getElementById("status-message").textContent = message;
 }
 
 function getForecastHourIndex(day) {
-  if (day === 0) return new Date().getHours();
+  if (day === 0) {
+    return new Date().getHours();
+  }
+
   return day * 24 + 12;
 }
 
@@ -73,6 +53,22 @@ function getSelectedDayLabel() {
   if (selectedDay === 0) return "today";
   if (selectedDay === 1) return "tomorrow";
   return "the day after tomorrow";
+}
+
+function degreesToCompass(degrees) {
+  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const index = Math.round(degrees / 45) % 8;
+  return directions[index];
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error("API request failed");
+  }
+
+  return response.json();
 }
 
 async function getWeatherForBeach(beach) {
@@ -84,53 +80,27 @@ async function getWeatherForBeach(beach) {
     `https://marine-api.open-meteo.com/v1/marine?latitude=${beach.lat}&longitude=${beach.lng}` +
     `&hourly=wave_height&forecast_days=3`;
 
-  const weatherResponse = await fetch(weatherUrl);
-  const marineResponse = await fetch(marineUrl);
-
-  const weatherData = await weatherResponse.json();
-  const marineData = await marineResponse.json();
+  const [weatherData, marineData] = await Promise.all([
+    fetchJson(weatherUrl),
+    fetchJson(marineUrl)
+  ]);
 
   const hourIndex = getForecastHourIndex(selectedDay);
 
   return {
-    windSpeed: weatherData.hourly.wind_speed_10m[hourIndex],
-    windDirectionDegrees: weatherData.hourly.wind_direction_10m[hourIndex],
-    rainChance: weatherData.hourly.precipitation_probability[hourIndex],
-    waveHeight: marineData.hourly.wave_height[hourIndex]
+    windSpeed: weatherData.hourly.wind_speed_10m[hourIndex] ?? 0,
+    windDirectionDegrees: weatherData.hourly.wind_direction_10m[hourIndex] ?? 0,
+    rainChance: weatherData.hourly.precipitation_probability[hourIndex] ?? 0,
+    waveHeight: marineData.hourly.wave_height[hourIndex] ?? 0
   };
 }
 
-function degreesToCompass(degrees) {
-  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-  const index = Math.round(degrees / 45) % 8;
-  return directions[index];
-}
-
 function calculateJellyfishRisk(windCompass, beach) {
-  const recentReports = jellyfishReports.filter(report => {
-    const isSameBeach = report.beach === beach.name;
-    const isRecent = Date.now() - report.timestamp < 24 * 60 * 60 * 1000;
-    return isSameBeach && isRecent;
-  });
-
-  const manyReports = recentReports.filter(report => report.report === "Many Jellyfish");
-  const someReports = recentReports.filter(report => report.report === "Some Jellyfish");
-  const clearReports = recentReports.filter(report => report.report === "No Jellyfish");
-
-  if (manyReports.length > 0) {
-    return { level: "High", className: "jellyfish-high", text: "Community reported" };
-  }
-
-  if (someReports.length > 0) {
-    return { level: "Medium", className: "jellyfish-medium", text: "Some reported" };
-  }
-
-  if (clearReports.length > 0) {
-    return { level: "Low", className: "jellyfish-low", text: "Reported clear" };
-  }
-
   if (beach.exposedTo.includes(windCompass)) {
-    return { level: "High", className: "jellyfish-high", text: "High risk" };
+    return {
+      level: "High",
+      text: "Higher risk due to wind"
+    };
   }
 
   const nearbyRiskDirections = {
@@ -145,54 +115,58 @@ function calculateJellyfishRisk(windCompass, beach) {
   };
 
   const nearbyDirections = nearbyRiskDirections[windCompass] || [];
-  const hasNearbyExposure = beach.exposedTo.some(direction => nearbyDirections.includes(direction));
+  const hasNearbyExposure = beach.exposedTo.some(direction =>
+    nearbyDirections.includes(direction)
+  );
 
   if (hasNearbyExposure) {
-    return { level: "Medium", className: "jellyfish-medium", text: "Possible risk" };
+    return {
+      level: "Medium",
+      text: "Possible risk"
+    };
   }
 
-  return { level: "Low", className: "jellyfish-low", text: "Low risk" };
+  return {
+    level: "Low",
+    text: "Lower risk"
+  };
 }
 
 function scoreBeach(beach, weather) {
   let score = 100;
-  const windCompass = degreesToCompass(weather.windDirectionDegrees);
   const reasons = [];
+  const windCompass = degreesToCompass(weather.windDirectionDegrees);
+  const jellyfishRisk = calculateJellyfishRisk(windCompass, beach);
 
   if (weather.waveHeight > 1) {
     score -= 50;
-    reasons.push("High waves");
+    reasons.push("high waves");
   } else if (weather.waveHeight > 0.5) {
     score -= 25;
-    reasons.push("Moderate waves");
+    reasons.push("moderate waves");
   }
 
   if (weather.windSpeed > 25) {
     score -= 20;
-    reasons.push("Strong wind");
+    reasons.push("strong wind");
   }
 
   if (beach.exposedTo.includes(windCompass)) {
     score -= 30;
-    reasons.push("Wind blowing into beach");
+    reasons.push("wind blowing into beach");
   }
 
   if (weather.rainChance > 50) {
     score -= 15;
-    reasons.push("Chance of rain");
+    reasons.push("chance of rain");
   }
-
-  const jellyfishRisk = calculateJellyfishRisk(windCompass, beach);
 
   if (jellyfishRisk.level === "High") {
-    score -= 25;
-    reasons.push("Jellyfish risk");
-  } else if (jellyfishRisk.level === "Medium") {
-    score -= 10;
-    reasons.push("Possible jellyfish risk");
+    score -= 15;
+    reasons.push("possible jellyfish risk");
   }
 
-  if (score < 0) score = 0;
+  score = Math.max(0, Math.round(score));
 
   let status = "Best";
   let className = "best";
@@ -205,54 +179,110 @@ function scoreBeach(beach, weather) {
     className = "good";
   }
 
-  return { score, status, className, windCompass, reasons, jellyfishRisk };
+  return {
+    score,
+    status,
+    className,
+    windCompass,
+    reasons,
+    jellyfishRisk
+  };
 }
 
-function calculateBestSide(results) {
-  const sideScores = { North: [], South: [], East: [], West: [] };
+async function loadBeachConditions() {
+  setStatus("Loading live beach conditions...");
+  document.getElementById("beach-list").innerHTML = "";
+
+  const promises = beaches.map(async beach => {
+    try {
+      const weather = await getWeatherForBeach(beach);
+      const rating = scoreBeach(beach, weather);
+
+      return {
+        beach,
+        weather,
+        rating,
+        error: false
+      };
+    } catch (error) {
+      console.error("Could not load beach:", beach.name, error);
+
+      return {
+        beach,
+        weather: null,
+        rating: null,
+        error: true
+      };
+    }
+  });
+
+  const results = await Promise.all(promises);
+
+  latestResults = results
+    .filter(result => !result.error)
+    .sort((a, b) => b.rating.score - a.rating.score);
+
+  if (!latestResults.length) {
+    setStatus("Could not load beach conditions. Please try again later.");
+    return;
+  }
+
+  setStatus(`Showing conditions for ${getSelectedDayLabel()}.`);
+  renderBestSide(latestResults);
+  renderResults();
+}
+
+function renderBestSide(results) {
+  const sideScores = {
+    North: [],
+    South: [],
+    East: [],
+    West: []
+  };
 
   results.forEach(result => {
     sideScores[result.beach.side].push(result.rating.score);
   });
 
-  let bestSide = "";
+  let bestSide = "Unknown";
   let bestAverage = 0;
 
-  for (const side in sideScores) {
+  Object.keys(sideScores).forEach(side => {
     const scores = sideScores[side];
-    if (!scores.length) continue;
 
-    const average = scores.reduce((a, b) => a + b, 0) / scores.length;
+    if (!scores.length) return;
+
+    const average = scores.reduce((total, score) => total + score, 0) / scores.length;
 
     if (average > bestAverage) {
       bestAverage = average;
       bestSide = side;
     }
-  }
+  });
 
   document.getElementById("best-side-banner").innerHTML =
-    `🌊 Best side of Malta ${getSelectedDayLabel()}: ` +
-    `<strong>${bestSide}</strong><br>` +
+    `🌊 Best side of Malta ${getSelectedDayLabel()}: <strong>${bestSide}</strong><br>` +
     `${Math.round(bestAverage)}/100 average conditions`;
 }
 
-function clearMapMarkers() {
-  mapMarkers.forEach(marker => map.removeLayer(marker));
-  mapMarkers = [];
-}
-
 function filterResults(results) {
-  if (activeFilters.includes("all")) return results;
+  if (activeFilters.includes("all")) {
+    return results;
+  }
 
   return results.filter(result => {
     return activeFilters.every(filter => {
-      if (filter === "jellyfish-safe") {
-        return result.rating.jellyfishRisk.level === "Low";
-      }
-
       return result.beach.type === filter || result.beach.side === filter;
     });
   });
+}
+
+function clearMapMarkers() {
+  mapMarkers.forEach(marker => {
+    map.removeLayer(marker);
+  });
+
+  mapMarkers = [];
 }
 
 function getWindArrow(weather) {
@@ -265,43 +295,38 @@ function getWindArrow(weather) {
   }
 
   return `
-    <div 
-      class="wind-arrow ${windClass}" 
-      style="transform: rotate(${weather.windDirectionDegrees}deg);"
-    >
+    <div class="wind-arrow ${windClass}" style="transform: rotate(${weather.windDirectionDegrees}deg);">
       <svg viewBox="0 0 64 64" aria-hidden="true">
-        <path 
-          d="M32 4 L54 60 L32 48 L10 60 Z" 
+        <path
+          d="M32 4 L54 60 L32 48 L10 60 Z"
           fill="currentColor"
           stroke="white"
           stroke-width="3"
           stroke-linejoin="round"
-        />
+        ></path>
       </svg>
     </div>
   `;
 }
 
-function renderResults(results) {
+function renderResults() {
   const beachList = document.getElementById("beach-list");
-  beachList.innerHTML = "";
+  const filteredResults = filterResults(latestResults);
 
+  beachList.innerHTML = "";
   clearMapMarkers();
 
-  const filteredResults = filterResults(results);
-
   if (!filteredResults.length) {
-    beachList.innerHTML = "No beaches match these filters.";
+    beachList.innerHTML = `<p>No beaches match these filters.</p>`;
     return;
   }
 
   filteredResults.forEach(result => {
     const { beach, weather, rating } = result;
 
-    const reasonText =
-      rating.reasons.length > 0
-        ? rating.reasons.join(", ")
-        : "Good swimming conditions";
+    const reasonText = rating.reasons.length
+      ? rating.reasons.join(", ")
+      : "good swimming conditions";
 
     const card = document.createElement("div");
     card.className = `beach-card ${rating.className}-card`;
@@ -310,11 +335,11 @@ function renderResults(results) {
       <h3>${beach.name}</h3>
       <span class="badge ${rating.className}">${rating.status}</span>
       <p>${beach.area} • ${beach.type} • ${beach.side}</p>
-      <p>🌬 ${rating.windCompass} ${weather.windSpeed} km/h</p>
-      <p>🌊 ${weather.waveHeight}m waves</p>
-      <p>🌧 ${weather.rainChance}% rain chance</p>
-      <p>🪼 <span class="${rating.jellyfishRisk.className}">${rating.jellyfishRisk.text}</span></p>
-      <p>⭐ ${rating.score}/100</p>
+      <p>🌬 Wind: ${rating.windCompass}, ${Math.round(weather.windSpeed)} km/h</p>
+      <p>🌊 Waves: ${weather.waveHeight.toFixed(1)}m</p>
+      <p>🌧 Rain chance: ${Math.round(weather.rainChance)}%</p>
+      <p>🪼 Jellyfish: ${rating.jellyfishRisk.text}</p>
+      <p>⭐ Score: ${rating.score}/100</p>
       <p><strong>Why:</strong> ${reasonText}</p>
     `;
 
@@ -339,8 +364,8 @@ function renderResults(results) {
         <strong>${beach.name}</strong><br>
         ${rating.status}<br>
         Score: ${rating.score}/100<br>
-        Wind: ${rating.windCompass} ${weather.windSpeed} km/h<br>
-        Waves: ${weather.waveHeight}m<br>
+        Wind: ${rating.windCompass}, ${Math.round(weather.windSpeed)} km/h<br>
+        Waves: ${weather.waveHeight.toFixed(1)}m<br>
         Jellyfish: ${rating.jellyfishRisk.text}
       `);
 
@@ -348,58 +373,17 @@ function renderResults(results) {
   });
 }
 
-async function loadApp() {
-  const beachList = document.getElementById("beach-list");
-  beachList.innerHTML = "Loading live beach conditions...";
-
-  const results = [];
-
-  for (const beach of beaches) {
-    try {
-      const weather = await getWeatherForBeach(beach);
-      const rating = scoreBeach(beach, weather);
-      results.push({ beach, weather, rating });
-    } catch (error) {
-      console.error("Error loading beach:", beach.name, error);
-    }
-  }
-
-  results.sort((a, b) => b.rating.score - a.rating.score);
-
-  latestResults = results;
-
-  calculateBestSide(results);
-  renderResults(results);
-}
-
-function setupRealtimeJellyfishReports() {
-  db.collection("jellyfishReports")
-    .orderBy("timestamp", "desc")
-    .limit(200)
-    .onSnapshot(snapshot => {
-      jellyfishReports = [];
-
-      snapshot.forEach(doc => {
-        jellyfishReports.push(doc.data());
-      });
-
-      if (latestResults.length) {
-        loadApp();
-      }
-    });
-}
-
 function setupDayButtons() {
   document.querySelectorAll(".day-button").forEach(button => {
     button.addEventListener("click", () => {
-      document.querySelectorAll(".day-button").forEach(btn =>
-        btn.classList.remove("active")
-      );
+      document.querySelectorAll(".day-button").forEach(item => {
+        item.classList.remove("active");
+      });
 
       button.classList.add("active");
       selectedDay = Number(button.dataset.day);
 
-      loadApp();
+      loadBeachConditions();
     });
   });
 }
@@ -412,15 +396,15 @@ function setupFilterButtons() {
       if (filter === "all") {
         activeFilters = ["all"];
 
-        document.querySelectorAll(".filter-button").forEach(btn =>
-          btn.classList.remove("active")
-        );
+        document.querySelectorAll(".filter-button").forEach(item => {
+          item.classList.remove("active");
+        });
 
         button.classList.add("active");
       } else {
-        activeFilters = activeFilters.filter(item => item !== "all");
-
         const allButton = document.querySelector('[data-filter="all"]');
+
+        activeFilters = activeFilters.filter(item => item !== "all");
 
         if (allButton) {
           allButton.classList.remove("active");
@@ -434,7 +418,7 @@ function setupFilterButtons() {
           button.classList.add("active");
         }
 
-        if (activeFilters.length === 0) {
+        if (!activeFilters.length) {
           activeFilters = ["all"];
 
           if (allButton) {
@@ -443,7 +427,7 @@ function setupFilterButtons() {
         }
       }
 
-      renderResults(latestResults);
+      renderResults();
     });
   });
 }
@@ -451,22 +435,20 @@ function setupFilterButtons() {
 function setupUserLocation() {
   const locationButton = document.getElementById("location-button");
 
-  if (!locationButton) return;
-
   locationButton.addEventListener("click", () => {
     if (!navigator.geolocation) {
       alert("Location is not supported by this browser.");
       return;
     }
 
-    locationButton.innerText = "Finding your location...";
+    locationButton.textContent = "Finding your location...";
 
     navigator.geolocation.getCurrentPosition(
       position => {
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
 
-        locationButton.innerText = "📍 Near me";
+        locationButton.textContent = "📍 Near me";
 
         if (userMarker) {
           map.removeLayer(userMarker);
@@ -489,73 +471,18 @@ function setupUserLocation() {
         map.setView([userLat, userLng], 12);
       },
       () => {
-        locationButton.innerText = "📍 Near me";
-        alert("Could not access your location. Please allow location permission.");
+        locationButton.textContent = "📍 Near me";
+        alert("Could not access your location.");
       }
     );
   });
 }
 
-function setupReportPanel() {
-  const reportButton = document.getElementById("report-button");
-  const panel = document.getElementById("jellyfish-panel");
-  const closeButton = document.getElementById("close-report");
-
-  if (!reportButton || !panel || !closeButton) return;
-
-  reportButton.addEventListener("click", () => {
-    panel.classList.remove("hidden");
-  });
-
-  closeButton.addEventListener("click", () => {
-    panel.classList.add("hidden");
-  });
-
-  document.querySelectorAll(".report-choice").forEach(choice => {
-    choice.addEventListener("click", () => {
-      selectedReportType = choice.dataset.report;
-
-      document.querySelectorAll(".report-choice").forEach(btn => {
-        btn.style.background = "white";
-      });
-
-      choice.style.background = "#e8f5ff";
-    });
-  });
-
-  document.getElementById("submit-report").addEventListener("click", async () => {
-    const beach = document.getElementById("report-beach").value;
-    const comment = document.getElementById("report-comment").value;
-
-    if (!selectedReportType) {
-      alert("Please select a report type.");
-      return;
-    }
-
-    await db.collection("jellyfishReports").add({
-      beach,
-      report: selectedReportType,
-      comment,
-      timestamp: Date.now()
-    });
-
-    alert("Report submitted!");
-
-    document.getElementById("report-comment").value = "";
-    selectedReportType = "";
-
-    document.querySelectorAll(".report-choice").forEach(btn => {
-      btn.style.background = "white";
-    });
-
-    panel.classList.add("hidden");
-  });
+function startApp() {
+  setupDayButtons();
+  setupFilterButtons();
+  setupUserLocation();
+  loadBeachConditions();
 }
 
-populateBeachDropdown();
-setupRealtimeJellyfishReports();
-setupDayButtons();
-setupFilterButtons();
-setupUserLocation();
-setupReportPanel();
-loadApp();
+startApp();
