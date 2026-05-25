@@ -1,0 +1,402 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #dff5ff;
+  color: #12233f;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 420px 1fr;
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #0057c8, #00a6df);
+  padding: 18px;
+  color: white;
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.logo-circle {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: white;
+  color: #0065d8;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.app-header p {
+  margin: 4px 0 0;
+}
+
+.panel {
+  background: rgba(255,255,255,0.96);
+  color: #12233f;
+  padding: 18px;
+  border-radius: 26px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: #f1f5fb;
+  border-radius: 18px;
+  padding: 6px;
+  margin-bottom: 16px;
+}
+
+.day-button {
+  border: 0;
+  background: transparent;
+  padding: 12px 8px;
+  border-radius: 14px;
+  font-weight: bold;
+  color: #34405c;
+  cursor: pointer;
+}
+
+.day-button.active {
+  background: #0b63ce;
+  color: white;
+  box-shadow: 0 6px 16px rgba(11,99,206,0.35);
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.filter-button {
+  border: 0;
+  background: white;
+  padding: 10px 14px;
+  border-radius: 12px;
+  color: #24324f;
+  font-weight: bold;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  cursor: pointer;
+}
+
+.filter-button.active {
+  background: #0b63ce;
+  color: white;
+}
+
+.primary-button {
+  width: 100%;
+  border: 0;
+  background: #0b63ce;
+  color: white;
+  padding: 13px;
+  border-radius: 14px;
+  font-weight: bold;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+
+.best-side-card {
+  background: linear-gradient(135deg, #e8f8ff, #ffffff);
+  border: 1px solid #69c8ff;
+  color: #0047a8;
+  padding: 16px;
+  border-radius: 16px;
+  text-align: center;
+  margin-bottom: 18px;
+  font-weight: bold;
+}
+
+.beach-card {
+  background: white;
+  border-radius: 18px;
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1px solid #e1e9f5;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  cursor: pointer;
+}
+
+.beach-card.best-card {
+  border-color: #52b86a;
+  background: linear-gradient(135deg, #ffffff, #effff2);
+}
+
+.beach-card.good-card {
+  border-color: #f4a62a;
+  background: linear-gradient(135deg, #ffffff, #fff8e8);
+}
+
+.beach-card.avoid-card {
+  border-color: #ef3b2d;
+  background: linear-gradient(135deg, #ffffff, #fff0f0);
+}
+
+.beach-card h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.best {
+  background: #2faa4f;
+  color: white;
+}
+
+.good {
+  background: #f4a62a;
+  color: white;
+}
+
+.avoid {
+  background: #e6392f;
+  color: white;
+}
+
+.jellyfish-low {
+  color: #2faa4f;
+  font-weight: bold;
+}
+
+.jellyfish-medium {
+  color: #f4a62a;
+  font-weight: bold;
+}
+
+.jellyfish-high {
+  color: #e6392f;
+  font-weight: bold;
+}
+
+.map-area {
+  position: relative;
+  min-height: 100vh;
+}
+
+#map {
+  width: 100%;
+  height: 100vh;
+}
+
+.wind-marker {
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.wind-arrow {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  font-weight: bold;
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,0.35));
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.wind-arrow.best {
+  color: #2faa4f;
+}
+
+.wind-arrow.good {
+  color: #f4a62a;
+}
+
+.wind-arrow.avoid {
+  color: #e6392f;
+}
+
+.user-marker {
+  font-size: 30px;
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.floating-report-button {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  z-index: 1000;
+  border: 0;
+  background: white;
+  color: #0b63ce;
+  padding: 16px 22px;
+  border-radius: 18px;
+  font-weight: bold;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+
+.report-panel {
+  position: absolute;
+  top: 90px;
+  right: 22px;
+  z-index: 1001;
+  width: 320px;
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 16px 50px rgba(0,0,0,0.25);
+}
+
+.hidden {
+  display: none;
+}
+
+.close-button {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: 0;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.report-panel h2 {
+  margin-top: 0;
+}
+
+.report-panel label {
+  display: block;
+  margin: 14px 0 6px;
+  font-weight: bold;
+}
+
+.report-panel select,
+.report-panel input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cfd8e6;
+  border-radius: 10px;
+}
+
+.report-choice {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: white;
+  text-align: left;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.report-choice span {
+  display: block;
+  font-size: 12px;
+  font-weight: normal;
+  margin-top: 4px;
+}
+
+.report-choice.high {
+  border: 1px solid #e6392f;
+}
+
+.report-choice.medium {
+  border: 1px solid #f4a62a;
+}
+
+.report-choice.low {
+  border: 1px solid #2faa4f;
+}
+
+.submit-button {
+  width: 100%;
+  margin-top: 14px;
+  border: 0;
+  background: #0b63ce;
+  color: white;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.wind-legend {
+  position: absolute;
+  bottom: 22px;
+  left: 22px;
+  z-index: 1000;
+  background: white;
+  padding: 14px 18px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.wind-legend p {
+  margin: 8px 0 0;
+}
+
+.legend-arrow {
+  font-size: 24px;
+  margin-right: 8px;
+}
+
+.green {
+  color: #2faa4f;
+}
+
+.orange {
+  color: #f4a62a;
+}
+
+.red {
+  color: #e6392f;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    max-height: none;
+  }
+
+  #map {
+    height: 600px;
+  }
+
+  .floating-report-button {
+    top: 12px;
+    right: 12px;
+  }
+
+  .report-panel {
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
